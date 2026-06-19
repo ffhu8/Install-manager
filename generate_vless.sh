@@ -19,6 +19,10 @@ XRAY_DIR="/usr/local/etc/xray"
 SERVER_CONFIG_PATH="${XRAY_DIR}/config.json"
 CLIENTS_DIR="${XRAY_DIR}/clients"
 
+# Инициализация массивов для совместимости оболочек
+VLESS_LINKS=()
+VLESS_NAMES=()
+
 # Проверки окружения
 if [ ! -f "$XRAY_PATH" ]; then
     echo -e "${RED}Ошибка: Бинарный файл Xray не найден в $XRAY_PATH${NC}"
@@ -30,19 +34,34 @@ if ! command -v jq &> /dev/null; then
     sudo apt-get update -y && sudo apt-get install -y jq
 fi
 
+if ! command -v curl &> /dev/null; then
+    echo -e "${YELLOW}Утилита curl не найдена. Установка...${NC}"
+    sudo apt-get update -y && sudo apt-get install -y curl
+fi
+
 # ------------------------------------------------------------------------------
 # Полная и безопасная зачистка старых данных перед генерацией
 # ------------------------------------------------------------------------------
 echo -e "${BLUE}Зачистка старых конфигураций клиентов...${NC}"
 sudo mkdir -p "$XRAY_DIR"
-if [ -d "$CLIENTS_DIR" ]; then
-    sudo rm -rf "$CLIENTS_DIR"
-fi
+sudo rm -rf "$CLIENTS_DIR"
 sudo mkdir -p "$CLIENTS_DIR"
 sudo chmod 755 "$CLIENTS_DIR"
 
-# Интерактивный ввод данных
-read -p "Внешний IP-адрес сервера (VPS): " SERVER_IP
+# ------------------------------------------------------------------------------
+# Интерактивный ввод данных с автоопределением IP
+# ------------------------------------------------------------------------------
+echo -e "${BLUE}Определение внешнего IP-адреса сервера...${NC}"
+DETECTED_IP=$(curl -s --max-time 5 https://ipinfo.io/ip || echo "")
+
+if [[ -n "$DETECTED_IP" ]]; then
+    read -p "Внешний IP-адрес сервера (VPS) [$DETECTED_IP]: " SERVER_IP
+    SERVER_IP=${SERVER_IP:-$DETECTED_IP}
+else
+    echo -e "${YELLOW}Предупреждение: Не удалось автоматически определить IP через ipinfo.io${NC}"
+    read -p "Внешний IP-адрес сервера (VPS): " SERVER_IP
+fi
+
 if [[ -z "$SERVER_IP" ]]; then
     echo -e "${RED}Ошибка: IP-адрес сервера не может быть пустым.${NC}"
     exit 1
@@ -97,8 +116,6 @@ echo "# RAW_PUB_KEY:${PUB_KEY}" | sudo tee -a "$CLIENTS_DIR/User_0.txt" > /dev/n
 # ------------------------------------------------------------------------------
 echo -e "${BLUE}Формирование базы клиентов...${NC}"
 CLIENTS_JSON_ARRAY=$(jq -n '[]')
-declare -a VLESS_LINKS
-declare -a VLESS_NAMES
 
 for ((i=1; i<=CLIENT_COUNT; i++)); do
     UUID=$($XRAY_PATH uuid)
@@ -112,6 +129,7 @@ for ((i=1; i<=CLIENT_COUNT; i++)); do
     VLESS_LINK="vless://${UUID}@${SERVER_IP}:443?security=reality&sni=${DEST_DOMAIN}&fp=chrome&pbk=${ENCODED_PUB_KEY}&sid=${SHORT_ID}&type=tcp#${NAME}"
     echo "$VLESS_LINK" | sudo tee "$CLIENTS_DIR/${NAME}.txt" > /dev/null
     
+    # [ИСПРАВЛЕНО] Правильное присвоение элементам массива без знака $ слева
     VLESS_LINKS[$i]=$VLESS_LINK
     VLESS_NAMES[$i]=$NAME
 done
