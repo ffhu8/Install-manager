@@ -2,7 +2,7 @@
 
 # ==============================================================================
 # Единый установщик Xray Manager через cURL (Проверенная Версия)
-# Скачивает компоненты, выставляет права и интегрирует команды в систему.
+# Автоматически ставит ядро Xray, скрипты, права и создает глобальные команды.
 # ==============================================================================
 
 set -e
@@ -14,9 +14,8 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0;m'
 
-
 GITHUB_USER="ffhu8"
-GITHUB_REPO="Install-manager"
+GITHUB_REPO="install-manager"
 GITHUB_BRANCH="main"
 
 # Базовый URL для скачивания сырых файлов (Raw)
@@ -24,31 +23,49 @@ BASE_URL="https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITH
 
 # Папка, куда мы сохраним сами скрипты, чтобы они не мешались в root-директории
 TARGET_DIR="/usr/local/share/xray-manager"
+XRAY_PATH="/usr/local/bin/xray"
 
 echo -e "${BLUE}=== Начало установки Xray Manager ===${NC}"
 
-# Проверяем и устанавливаем curl, если его нет в системе
+# 1. Проверяем и устанавливаем curl, если его нет в системе
 if ! command -v curl &> /dev/null; then
     echo -e "${YELLOW}curl не найден. Устанавливаем...${NC}"
     sudo apt-get update -y && sudo apt-get install -y curl
 fi
 
-# Создаем системную папку для хранения утилит
+# 2. АВТОУСТАНОВКА ЯДРА XRAY (Если его еще нет на сервере)
+if [ ! -f "$XRAY_PATH" ]; then
+    echo -e "${YELLOW}Ядро Xray не найдено в системе. Запуск официального установщика XTLS...${NC}"
+    
+    # [ИСПРАВЛЕНО] Добавлен || true, чтобы set -e не ронял скрипт из-за статуса службы XTLS
+    sudo bash -c "$(curl -sL https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install || true
+    
+    # Дополнительная жесткая проверка, что физический бинарник появился
+    if [ ! -f "$XRAY_PATH" ]; then
+        echo -e "${RED}Критическая ошибка: Не удалось установить официальное ядро Xray!${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}Ядро Xray успешно интегрировано в систему.${NC}"
+else
+    echo -e "${GREEN}Ядро Xray уже установлено в $XRAY_PATH, пропускаем этот шаг.${NC}"
+fi
+
+# 3. Создаем системную папку для хранения утилит управления
 sudo mkdir -p "$TARGET_DIR"
 
-echo -e "${BLUE}Скачивание компонентов с GitHub...${NC}"
+echo -e "${BLUE}Скачивание компонентов управления с GitHub...${NC}"
 
 # Функция для безопасного скачивания с таймаутами и проверкой ошибок
 download_script() {
     local file_name=$1
     echo -e "Загрузка ${YELLOW}${file_name}${NC}..."
     
-    # Скачиваем с защитой от зависания сети (--connect-timeout и --retry)
+    # Скачиваем с защитой от зависания сети
     sudo curl -sSL --connect-timeout 10 --retry 3 "${BASE_URL}/${file_name}" -o "${TARGET_DIR}/${file_name}"
     
-    # Проверка: если файл пустой или содержит 404 ошибку (например, неверный ник/репозиторий)
+    # Проверка: если файл пустой или содержит 404 ошибку
     if [ ! -s "${TARGET_DIR}/${file_name}" ] || grep -q "404: Not Found" "${TARGET_DIR}/${file_name}"; then
-        echo -e "${RED}Ошибка: Не удалось скачать ${file_name}. Проверьте имя пользователя и репозиторий в install.sh${NC}"
+        echo -e "${RED}Ошибка: Не удалось скачать ${file_name}. Проверьте имя репозитория в install.sh${NC}"
         sudo rm -f "${TARGET_DIR}/${file_name}"
         exit 1
     fi
@@ -57,7 +74,7 @@ download_script() {
     sudo chmod +x "${TARGET_DIR}/${file_name}"
 }
 
-# Скачиваем все три скрипта
+# Скачиваем все три скрипта управления
 download_script "generate_vless.sh"
 download_script "update_clients.sh"
 download_script "remove_clients.sh"
