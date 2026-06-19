@@ -58,23 +58,30 @@ CUSTOM_NAME=${CUSTOM_NAME:-"User"}
 read -p "Количество клиентов для генерации [1]: " INPUT_COUNT
 if ! [[ "$INPUT_COUNT" =~ ^[0-9]+$ ]] ; then
     CLIENT_COUNT=1
-  else
+else
     CLIENT_COUNT=$INPUT_COUNT
 fi
 
-# Генерация криптографических ключей Reality
+# ------------------------------------------------------------------------------
+# Надежная генерация и парсинг криптографических ключей Reality
+# ------------------------------------------------------------------------------
 echo -e "${BLUE}Генерация ключей Reality...${NC}"
 X25519_OUTPUT=$($XRAY_PATH x25519)
-PRIV_KEY=$(echo "$X25519_OUTPUT" | grep "Private key" | cut -d ':' -f2- | tr -d '[:space:]\r\n')
-PUB_KEY=$(echo "$X25519_OUTPUT" | grep "Public key" | cut -d ':' -f2- | tr -d '[:space:]\r\n')
 
-if [[ -z "$PRIV_KEY" || -z "$PUB_KEY" ]]; then
-    echo -e "${RED}Критическая ошибка: Не удалось извлечь ключи X25519!${NC}"
+# Построчный разбор вывода кастомного Xray (исключаем текстовые маски)
+RAW_LINE_1=$(echo "$X25519_OUTPUT" | sed -n '1p')
+RAW_LINE_2=$(echo "$X25519_OUTPUT" | sed -n '2p')
+
+# Отсекаем заголовки до двоеточия и полностью вырезаем пробелы/переносы
+PRIV_KEY=$(echo "$RAW_LINE_1" | cut -d ':' -f2- | tr -d '[:space:]\r\n')
+PUB_KEY=$(echo "$RAW_LINE_2" | cut -d ':' -f2- | tr -d '[:space:]\r\n')
+
+if [ -z "$PRIV_KEY" ] || [ -z "$PUB_KEY" ]; then
+    echo -e "${RED}Критическая ошибка: Скрипт не смог извлечь ключи из вывода xray x25519!${NC}"
     exit 1
 fi
 
 SHORT_ID=$($XRAY_PATH uuid | tr -d '-' | head -c 16)
-# [ИСПРАВЛЕНО] Надежное экранирование без лишних переносов строк в URL
 ENCODED_PUB_KEY=$(echo -n "$PUB_KEY" | jq -Rr @uri | tr -d '[:space:]\r\n')
 
 # ------------------------------------------------------------------------------
