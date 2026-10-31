@@ -38,7 +38,7 @@ if [ ! -f "$XRAY_PATH" ]; then
     echo -e "${YELLOW}Ядро Xray не найдено в системе. Запуск официального установщика XTLS...${NC}"
     
     # [ИСПРАВЛЕНО] Добавлен || true, чтобы set -e не ронял скрипт из-за статуса службы XTLS
-    sudo bash -c "$(curl -sL https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install || true
+    sudo bash -c "$(curl -sL https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install --version 26.6.27 || true
     
     # Дополнительная жесткая проверка, что физический бинарник появился
     if [ ! -f "$XRAY_PATH" ]; then
