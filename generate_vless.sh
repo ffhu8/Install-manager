@@ -107,7 +107,7 @@ ENCODED_PUB_KEY=$(echo -n "$PUB_KEY" | jq -Rr @uri | tr -d '[:space:]\r\n')
 # 1. Создание изолированного технического шаблона User_0
 # ------------------------------------------------------------------------------
 USER_0_UUID=$($XRAY_PATH uuid)
-USER_0_LINK="vless://${USER_0_UUID}@${SERVER_IP}:443?security=reality&sni=${DEST_DOMAIN}&fp=chrome&pbk=${ENCODED_PUB_KEY}&sid=${SHORT_ID}&type=tcp#User_0"
+USER_0_LINK="vless://${USER_0_UUID}@${SERVER_IP}:443?security=reality&sni=${DEST_DOMAIN}&fp=firefox&pbk=${ENCODED_PUB_KEY}&sid=${SHORT_ID}&type=tcp#User_0"
 echo "$USER_0_LINK" | sudo tee "$CLIENTS_DIR/User_0.txt" > /dev/null
 echo "# RAW_PUB_KEY:${PUB_KEY}" | sudo tee -a "$CLIENTS_DIR/User_0.txt" > /dev/null
 

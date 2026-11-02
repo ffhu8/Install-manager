@@ -103,7 +103,7 @@ for ((i=1; i<=NEW_COUNT; i++)); do
     WORKING_JSON=$(echo "$WORKING_JSON" | jq --argjson new_client "$CLIENT_NODE" '.inbounds[0].settings.clients += [$new_client]')
     
     # Собираем строку vless:// с новым кастомным именем профиля
-    VLESS_LINK="vless://${USER_UUID}@${SERVER_IP}:443?security=reality&sni=${DEST_DOMAIN}&fp=chrome&pbk=${ENCODED_PUB_KEY}&sid=${SHORT_ID}&type=tcp#${USER_NAME}"
+    VLESS_LINK="vless://${USER_UUID}@${SERVER_IP}:443?security=reality&sni=${DEST_DOMAIN}&fp=firefox&pbk=${ENCODED_PUB_KEY}&sid=${SHORT_ID}&type=tcp#${USER_NAME}"
     
     # Сохраняем текстовый файл напрямую в системную папку клиентов
     echo "$VLESS_LINK" | sudo tee "$CLIENTS_DIR/${USER_NAME}.txt" > /dev/null
