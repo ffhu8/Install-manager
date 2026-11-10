@@ -126,7 +126,7 @@ for ((i=1; i<=CLIENT_COUNT; i++)); do
     CLIENTS_JSON_ARRAY=$(echo "$CLIENTS_JSON_ARRAY" | jq ". += [$CLIENT_NODE]")
     
     # Генерация ссылки и запись в файл
-    VLESS_LINK="vless://${UUID}@${SERVER_IP}:443?security=reality&sni=${DEST_DOMAIN}&fp=chrome&pbk=${ENCODED_PUB_KEY}&sid=${SHORT_ID}&type=tcp#${NAME}"
+    VLESS_LINK="vless://${UUID}@${SERVER_IP}:443?security=reality&sni=${DEST_DOMAIN}&fp=firefox&pbk=${ENCODED_PUB_KEY}&sid=${SHORT_ID}&type=tcp#${NAME}"
     echo "$VLESS_LINK" | sudo tee "$CLIENTS_DIR/${NAME}.txt" > /dev/null
     
     # [ИСПРАВЛЕНО] Правильное присвоение элементам массива без знака $ слева
